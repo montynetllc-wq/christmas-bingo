@@ -124,19 +124,23 @@ function choose(id){let obj=ICONS.find(x=>x.id===id);if(!current){$('message').t
 function changePref(key,value){if(key==='drag'){cancelPictureDrag();if(current&&!covered.has(current))$('message').textContent=value?'Drag or tap the match!':'Find this picture!'}prefs[key]=value;save();render();if(bingo()&&!hasCelebrated){hasCelebrated=true;$('bingoOverlay').classList.add('show')}}
 function syncControls(){document.querySelectorAll('input[name="layout"]').forEach(x=>x.checked=+x.value===+prefs.layout);$('voiceToggle').checked=prefs.voice;$('effectsToggle').checked=prefs.effects;$('reachToggle').checked=prefs.reach;$('dragToggle').checked=!!prefs.drag;$('winChoice').value=prefs.win;$('deviceChoice').value=prefs.device}
 function openSettings(){cancelPictureDrag();syncControls();if(!$('teacherSettings').open)$('teacherSettings').showModal()}
-/* Pointer events work on iPad, mouse and pen. The top card never moves:
-   a floating picture follows the pointer, and releasing it on a board cell
-   uses the same choose() validation as tapping. */
+/* Touch gestures use native touch events for reliable iPad Safari handling.
+   Mouse and pen use Pointer Events. The actual called card stays anchored:
+   a visual copy follows the finger, and a match uses the existing choose(). */
 function cancelPictureDrag(){
  if(!activeDrag)return;
  if(activeDrag.ghost)activeDrag.ghost.remove();
  $('callCard').classList.remove('dragging');
  activeDrag=null;
 }
-function movePictureGhost(e){
- if(!activeDrag||activeDrag.pointerId!==e.pointerId)return;
+function beginPictureDrag(kind,id,x,y){
+ if(!prefs.drag||!current||covered.has(current)||activeDrag||$('bingoOverlay').classList.contains('show'))return;
+ activeDrag={kind,id,x,y,ghost:null};
+}
+function movePictureGhost(x,y){
+ if(!activeDrag)return;
  if(!activeDrag.ghost){
-   if(Math.hypot(e.clientX-activeDrag.x,e.clientY-activeDrag.y)<10)return;
+   if(Math.hypot(x-activeDrag.x,y-activeDrag.y)<10)return;
    const ghost=document.createElement('div');
    ghost.className='pictureDragGhost';
    ghost.setAttribute('aria-hidden','true');
@@ -150,28 +154,60 @@ function movePictureGhost(e){
    activeDrag.ghost=ghost;
    $('callCard').classList.add('dragging');
  }
- activeDrag.ghost.style.left=e.clientX+'px';
- activeDrag.ghost.style.top=(e.clientY-32)+'px';
+ activeDrag.ghost.style.left=x+'px';
+ activeDrag.ghost.style.top=(y-32)+'px';
 }
-$('callCard').addEventListener('pointerdown',e=>{
- if(!prefs.drag||!current||covered.has(current)||activeDrag||$('bingoOverlay').classList.contains('show'))return;
- if(e.pointerType==='mouse'&&e.button!==0)return;
- activeDrag={pointerId:e.pointerId,x:e.clientX,y:e.clientY,ghost:null};
- try{$('callCard').setPointerCapture(e.pointerId)}catch{}
-});
-$('callCard').addEventListener('pointermove',movePictureGhost);
-$('callCard').addEventListener('pointerup',e=>{
- if(!activeDrag||activeDrag.pointerId!==e.pointerId)return;
+function finishPictureDrag(x,y){
+ if(!activeDrag)return;
  const didDrag=!!activeDrag.ghost;
- const cell=didDrag?document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell[data-picture-id]'):null;
+ const element=didDrag?document.elementFromPoint(x,y):null;
+ const cell=element&&element.closest?element.closest('.cell[data-picture-id]'):null;
  const board=prefs.reach?$('reachCards'):$('board');
  const id=cell&&board.contains(cell)?cell.dataset.pictureId:null;
  cancelPictureDrag();
  if(id)choose(id);
  else if(didDrag)$('message').textContent='Try dropping on a matching picture';
+}
+/* On iPad, explicit touchmove/touchend listeners keep the drag going even
+   when the finger moves beyond the top card. passive:false permits preventing
+   the browser from scrolling during the drag. */
+$('callCard').addEventListener('touchstart',e=>{
+ if(e.touches.length!==1)return;
+ const t=e.changedTouches[0];
+ if(t)beginPictureDrag('touch',t.identifier,t.clientX,t.clientY);
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+ if(!activeDrag||activeDrag.kind!=='touch')return;
+ const t=Array.from(e.touches).find(t=>t.identifier===activeDrag.id);
+ if(!t)return;
+ if(e.cancelable)e.preventDefault();
+ movePictureGhost(t.clientX,t.clientY);
+},{passive:false});
+document.addEventListener('touchend',e=>{
+ if(!activeDrag||activeDrag.kind!=='touch')return;
+ const t=Array.from(e.changedTouches).find(t=>t.identifier===activeDrag.id);
+ if(t)finishPictureDrag(t.clientX,t.clientY);
+},{passive:false});
+document.addEventListener('touchcancel',e=>{
+ if(activeDrag&&activeDrag.kind==='touch'&&Array.from(e.changedTouches).some(t=>t.identifier===activeDrag.id))cancelPictureDrag();
 });
-$('callCard').addEventListener('pointercancel',e=>{if(activeDrag&&activeDrag.pointerId===e.pointerId)cancelPictureDrag()});
-$('callCard').addEventListener('lostpointercapture',e=>{if(activeDrag&&activeDrag.pointerId===e.pointerId)cancelPictureDrag()});
+/* Touch pointer events are deliberately skipped: iPad already uses the
+   touch handlers above, avoiding duplicate or conflicting gesture handling. */
+$('callCard').addEventListener('pointerdown',e=>{
+ if(e.pointerType==='touch'||(e.pointerType==='mouse'&&e.button!==0))return;
+ beginPictureDrag('pointer',e.pointerId,e.clientX,e.clientY);
+});
+document.addEventListener('pointermove',e=>{
+ if(activeDrag&&activeDrag.kind==='pointer'&&activeDrag.id===e.pointerId)movePictureGhost(e.clientX,e.clientY);
+});
+document.addEventListener('pointerup',e=>{
+ if(activeDrag&&activeDrag.kind==='pointer'&&activeDrag.id===e.pointerId)finishPictureDrag(e.clientX,e.clientY);
+});
+document.addEventListener('pointercancel',e=>{
+ if(activeDrag&&activeDrag.kind==='pointer'&&activeDrag.id===e.pointerId)cancelPictureDrag();
+});
+window.addEventListener('blur',cancelPictureDrag);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelPictureDrag()});
 $('callCard').addEventListener('dragstart',e=>e.preventDefault());
 $('pickBtn').addEventListener('click',pick);
 $('nextPlayerBtn').addEventListener('click',startGame);
