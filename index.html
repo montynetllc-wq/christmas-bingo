@@ -41,6 +41,12 @@ header{min-height:clamp(46px,10vh,101px)}
 #quickNewGame .newGameIcon{font-size:27px;line-height:1;font-weight:600}
 #quickNewGame:active{background:#e3eae1}
 @media(max-width:620px){#quickNewGame{width:48px;min-width:48px;min-height:48px;padding:0}#quickNewGame .newGameLabel{display:none}}
+/* Optional drag interaction: the called card stays fixed; only its copy moves. */
+#callCard.dragEnabled:not(.empty){touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none}
+#callCard.dragEnabled.dragging{cursor:grabbing}
+.pictureDragGhost{position:fixed;z-index:20;pointer-events:none;transform:translate(-50%,-50%);aspect-ratio:1/1;background:white;border:3px solid #9ecab7;border-radius:17px;box-shadow:0 12px 34px #163c3180;display:flex;align-items:center;justify-content:center;opacity:.94}
+.pictureDragGhost .dragArt{width:90%;height:90%;display:flex;align-items:center;justify-content:center}
+.pictureDragGhost .dragArt img,.pictureDragGhost .dragArt svg{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
 </style>
 </head>
 <body>
@@ -62,7 +68,7 @@ header{min-height:clamp(46px,10vh,101px)}
 <div id="bingoOverlay" role="dialog" aria-modal="true" aria-label="Bingo celebration"><div id="bingoPanel"><h2>BINGO!</h2><p>Great matching!</p><button id="nextPlayerBtn" type="button">NEXT PLAYER</button></div></div>
 <dialog id="teacherSettings"><div id="settingsContent"><h2>Teacher Settings</h2><p>For grown-ups. The same controls work on iPad and Promethean boards.</p>
 <fieldset><legend>Grid layout</legend><label class="option"><input type="radio" name="layout" value="4">4 columns × 5 rows</label><label class="option"><input type="radio" name="layout" value="5">5 columns × 4 rows</label></fieldset>
-<fieldset><legend>Picture and sound</legend><label class="option"><input id="voiceToggle" type="checkbox">Voice: read the picture name aloud</label><label class="option"><input id="effectsToggle" type="checkbox">Gentle sound effects</label><label class="option"><input id="reachToggle" type="checkbox">Reach Mode: bring one row down to the bottom</label></fieldset>
+<fieldset><legend>Picture and sound</legend><label class="option"><input id="voiceToggle" type="checkbox">Voice: read the picture name aloud</label><label class="option"><input id="effectsToggle" type="checkbox">Gentle sound effects</label><label class="option"><input id="reachToggle" type="checkbox">Reach Mode: bring one row down to the bottom</label><label class="option"><input id="dragToggle" type="checkbox">Allow drag-and-drop matching (tap also works)</label></fieldset>
 <fieldset><legend>Game rules</legend><label class="option" for="winChoice">Bingo winning pattern</label><select id="winChoice"><option value="line">Any complete row or column</option><option value="blackout">Cover all 20 pictures</option></select></fieldset>
 <fieldset><legend>Device preference (optional)</legend><label class="option" for="deviceChoice">Initial setup for this device</label><select id="deviceChoice"><option value="auto">Automatic (screen-based suggestion)</option><option value="ipad">iPad defaults</option><option value="board">Promethean defaults</option></select><p id="note">Both modes offer every feature. This only selects the initial preferences for new devices.</p></fieldset>
 <div class="setting-actions"><button id="newGameBtn" class="danger" type="button">NEW GAME</button><button id="doneBtn" class="done" type="button">DONE</button></div>
@@ -99,24 +105,74 @@ const ICONS = [
 const $ = id=>document.getElementById(id);
 const prefsKey='xmas-bingo-teacher-settings-v2';
 const screenSuggest=()=> (window.innerWidth>=1280 && window.innerWidth / Math.max(1,window.innerHeight)>1.48)?'board':'ipad';
-const defaultPrefs=()=>{let kind=screenSuggest();return {layout:kind==='board'?5:4,voice:false,effects:false,reach:kind==='board',win:'line',device:'auto'}};
+const defaultPrefs=()=>{let kind=screenSuggest();return {layout:kind==='board'?5:4,voice:false,effects:false,drag:false,reach:kind==='board',win:'line',device:'auto'}};
 let prefs;try{prefs={...defaultPrefs(),...JSON.parse(localStorage.getItem(prefsKey)||'{}')}}catch{prefs=defaultPrefs()}
 if(![4,5].includes(+prefs.layout))prefs.layout=4;
 let order=[],called=[],covered=new Set(),current=null,reachRow=0,hasCelebrated=false;
+let activeDrag=null;
 const save=()=>{try{localStorage.setItem(prefsKey,JSON.stringify(prefs))}catch{}};
 const shuffle=items=>{const copy=[...items];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 function confirmNewGame(){if(!confirm('Start a new game? Your current game will be cleared.'))return false;startGame();return true}
-function startGame(){order=shuffle(ICONS.map(x=>x.id));called=[];covered=new Set();current=null;reachRow=0;hasCelebrated=false;$('callArt').innerHTML='?';$('callArt').className='placeholder';$('callArt').removeAttribute('aria-label');$('callCard').classList.add('empty');$('message').textContent='Tap to reveal a picture';$('pickBtn').disabled=false;$('pickBtn').innerHTML='PICK A<br>CARD';$('bingoOverlay').classList.remove('show');render()}
-function cellFor(id,preview=false){let obj=ICONS.find(x=>x.id===id),b=document.createElement(preview?'div':'button');b.className='cell';if(!preview){b.type='button';b.setAttribute('aria-label',obj.name+(covered.has(id)?', covered':''));b.addEventListener('click',()=>choose(id))}else{b.setAttribute('aria-label',obj.name)};let art=document.createElement('span');art.className='art';art.innerHTML=obj.svg;b.append(art);if(covered.has(id)){let cover=document.createElement('span');cover.className='cover';b.append(cover)}return b}
-function render(){let cols=+prefs.layout,rows=20/cols;$('board').style.setProperty('--cols',cols);$('board').style.setProperty('--rows',rows);$('reachCards').style.setProperty('--cols',cols);$('reachCards').style.setProperty('--rows',1);$('board').replaceChildren(...order.map(id=>cellFor(id,!!prefs.reach)));document.body.classList.toggle('reach',!!prefs.reach);reachRow=Math.max(0,Math.min(rows-1,reachRow));let start=reachRow*cols;$('reachCards').replaceChildren(...order.slice(start,start+cols).map(id=>cellFor(id)));$('rowLabel').textContent=`Row ${reachRow+1} of ${rows}`}
+function startGame(){cancelPictureDrag();order=shuffle(ICONS.map(x=>x.id));called=[];covered=new Set();current=null;reachRow=0;hasCelebrated=false;$('callArt').innerHTML='?';$('callArt').className='placeholder';$('callArt').removeAttribute('aria-label');$('callCard').classList.add('empty');$('message').textContent='Tap to reveal a picture';$('pickBtn').disabled=false;$('pickBtn').innerHTML='PICK A<br>CARD';$('bingoOverlay').classList.remove('show');render()}
+function cellFor(id,preview=false){let obj=ICONS.find(x=>x.id===id),b=document.createElement(preview?'div':'button');b.className='cell';b.dataset.pictureId=id;if(!preview){b.type='button';b.setAttribute('aria-label',obj.name+(covered.has(id)?', covered':''));b.addEventListener('click',()=>choose(id))}else{b.setAttribute('aria-label',obj.name)};let art=document.createElement('span');art.className='art';art.innerHTML=obj.svg;b.append(art);if(covered.has(id)){let cover=document.createElement('span');cover.className='cover';b.append(cover)}return b}
+function render(){let cols=+prefs.layout,rows=20/cols;$('board').style.setProperty('--cols',cols);$('board').style.setProperty('--rows',rows);$('reachCards').style.setProperty('--cols',cols);$('reachCards').style.setProperty('--rows',1);$('board').replaceChildren(...order.map(id=>cellFor(id,!!prefs.reach)));$('callCard').classList.toggle('dragEnabled',!!prefs.drag);document.body.classList.toggle('reach',!!prefs.reach);reachRow=Math.max(0,Math.min(rows-1,reachRow));let start=reachRow*cols;$('reachCards').replaceChildren(...order.slice(start,start+cols).map(id=>cellFor(id)));$('rowLabel').textContent=`Row ${reachRow+1} of ${rows}`}
 function speak(label){if(!prefs.voice||!('speechSynthesis' in window))return;try{speechSynthesis.cancel();let utter=new SpeechSynthesisUtterance(label);utter.lang='en-US';utter.rate=.84;utter.pitch=1.12;speechSynthesis.speak(utter)}catch{}}
 function tone(freq=600){if(!prefs.effects)return;try{let ctx=new(window.AudioContext||window.webkitAudioContext)(),o=ctx.createOscillator(),v=ctx.createGain();o.type='sine';o.frequency.value=freq;v.gain.value=.06;o.connect(v);v.connect(ctx.destination);o.start();v.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.20);o.stop(ctx.currentTime+.22);o.onended=()=>ctx.close()}catch{}}
-function pick(){if(current&&!covered.has(current)){$('message').textContent='Match the current picture first';return}if(called.length===ICONS.length){$('message').textContent='All pictures matched!';$('pickBtn').disabled=true;$('pickBtn').innerHTML='ALL<br>FOUND';return}let remain=ICONS.map(x=>x.id).filter(id=>!called.includes(id));current=shuffle(remain)[0];called.push(current);let obj=ICONS.find(x=>x.id===current);$('callArt').innerHTML=obj.svg;$('callArt').className='';$('callCard').classList.remove('empty');$('callArt').setAttribute('aria-label',obj.name);$('message').textContent='Find this picture!';$('pickBtn').disabled=true;$('pickBtn').innerHTML='FIND THE<br>MATCH';speak(obj.name)}
+function pick(){if(current&&!covered.has(current)){$('message').textContent='Match the current picture first';return}if(called.length===ICONS.length){$('message').textContent='All pictures matched!';$('pickBtn').disabled=true;$('pickBtn').innerHTML='ALL<br>FOUND';return}let remain=ICONS.map(x=>x.id).filter(id=>!called.includes(id));current=shuffle(remain)[0];called.push(current);let obj=ICONS.find(x=>x.id===current);$('callArt').innerHTML=obj.svg;$('callArt').className='';$('callCard').classList.remove('empty');$('callArt').setAttribute('aria-label',obj.name);$('message').textContent=prefs.drag?'Drag or tap the match!':'Find this picture!';$('pickBtn').disabled=true;$('pickBtn').innerHTML='FIND THE<br>MATCH';speak(obj.name)}
 function bingo(){let cols=+prefs.layout,rows=20/cols;let positions=order.map(x=>covered.has(x));if(prefs.win==='blackout')return positions.every(Boolean);for(let r=0;r<rows;r++)if(positions.slice(r*cols,(r+1)*cols).every(Boolean))return true;for(let c=0;c<cols;c++){let all=true;for(let r=0;r<rows;r++)if(!positions[r*cols+c])all=false;if(all)return true}return false}
 function choose(id){let obj=ICONS.find(x=>x.id===id);if(!current){$('message').textContent='Pick a picture first';return}if(covered.has(id))return;if(id!==current){$('message').textContent='Look for the same picture';document.querySelectorAll('.cell').forEach(x=>{if(x.getAttribute('aria-label')===obj.name){x.classList.add('wrong');setTimeout(()=>x.classList.remove('wrong'),450)}});return}covered.add(id);let finished=called.length===ICONS.length;$('message').textContent=finished?'All pictures matched!':'You found it!';$('pickBtn').disabled=finished;$('pickBtn').innerHTML=finished?'ALL<br>FOUND':'NEXT<br>PICTURE';tone();render();if(bingo()&&!hasCelebrated){hasCelebrated=true;$('bingoOverlay').classList.add('show');tone(800)} }
-function changePref(key,value){prefs[key]=value;save();render();if(bingo()&&!hasCelebrated){hasCelebrated=true;$('bingoOverlay').classList.add('show')}}
-function syncControls(){document.querySelectorAll('input[name="layout"]').forEach(x=>x.checked=+x.value===+prefs.layout);$('voiceToggle').checked=prefs.voice;$('effectsToggle').checked=prefs.effects;$('reachToggle').checked=prefs.reach;$('winChoice').value=prefs.win;$('deviceChoice').value=prefs.device}
-function openSettings(){syncControls();if(!$('teacherSettings').open)$('teacherSettings').showModal()}
+function changePref(key,value){if(key==='drag'){cancelPictureDrag();if(current&&!covered.has(current))$('message').textContent=value?'Drag or tap the match!':'Find this picture!'}prefs[key]=value;save();render();if(bingo()&&!hasCelebrated){hasCelebrated=true;$('bingoOverlay').classList.add('show')}}
+function syncControls(){document.querySelectorAll('input[name="layout"]').forEach(x=>x.checked=+x.value===+prefs.layout);$('voiceToggle').checked=prefs.voice;$('effectsToggle').checked=prefs.effects;$('reachToggle').checked=prefs.reach;$('dragToggle').checked=!!prefs.drag;$('winChoice').value=prefs.win;$('deviceChoice').value=prefs.device}
+function openSettings(){cancelPictureDrag();syncControls();if(!$('teacherSettings').open)$('teacherSettings').showModal()}
+/* Pointer events work on iPad, mouse and pen. The top card never moves:
+   a floating picture follows the pointer, and releasing it on a board cell
+   uses the same choose() validation as tapping. */
+function cancelPictureDrag(){
+ if(!activeDrag)return;
+ if(activeDrag.ghost)activeDrag.ghost.remove();
+ $('callCard').classList.remove('dragging');
+ activeDrag=null;
+}
+function movePictureGhost(e){
+ if(!activeDrag||activeDrag.pointerId!==e.pointerId)return;
+ if(!activeDrag.ghost){
+   if(Math.hypot(e.clientX-activeDrag.x,e.clientY-activeDrag.y)<10)return;
+   const ghost=document.createElement('div');
+   ghost.className='pictureDragGhost';
+   ghost.setAttribute('aria-hidden','true');
+   const art=$('callArt').cloneNode(true);
+   art.removeAttribute('id');
+   art.className='dragArt';
+   ghost.append(art);
+   const width=Math.max(76,Math.min(132,$('callCard').getBoundingClientRect().width*.85));
+   ghost.style.width=width+'px';
+   document.body.append(ghost);
+   activeDrag.ghost=ghost;
+   $('callCard').classList.add('dragging');
+ }
+ activeDrag.ghost.style.left=e.clientX+'px';
+ activeDrag.ghost.style.top=(e.clientY-32)+'px';
+}
+$('callCard').addEventListener('pointerdown',e=>{
+ if(!prefs.drag||!current||covered.has(current)||activeDrag||$('bingoOverlay').classList.contains('show'))return;
+ if(e.pointerType==='mouse'&&e.button!==0)return;
+ activeDrag={pointerId:e.pointerId,x:e.clientX,y:e.clientY,ghost:null};
+ try{$('callCard').setPointerCapture(e.pointerId)}catch{}
+});
+$('callCard').addEventListener('pointermove',movePictureGhost);
+$('callCard').addEventListener('pointerup',e=>{
+ if(!activeDrag||activeDrag.pointerId!==e.pointerId)return;
+ const didDrag=!!activeDrag.ghost;
+ const cell=didDrag?document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell[data-picture-id]'):null;
+ const board=prefs.reach?$('reachCards'):$('board');
+ const id=cell&&board.contains(cell)?cell.dataset.pictureId:null;
+ cancelPictureDrag();
+ if(id)choose(id);
+ else if(didDrag)$('message').textContent='Try dropping on a matching picture';
+});
+$('callCard').addEventListener('pointercancel',e=>{if(activeDrag&&activeDrag.pointerId===e.pointerId)cancelPictureDrag()});
+$('callCard').addEventListener('lostpointercapture',e=>{if(activeDrag&&activeDrag.pointerId===e.pointerId)cancelPictureDrag()});
+$('callCard').addEventListener('dragstart',e=>e.preventDefault());
 $('pickBtn').addEventListener('click',pick);
 $('nextPlayerBtn').addEventListener('click',startGame);
 $('quickNewGame').addEventListener('click',confirmNewGame);
@@ -128,6 +184,7 @@ document.querySelectorAll('input[name="layout"]').forEach(x=>x.addEventListener(
 $('voiceToggle').addEventListener('change',e=>changePref('voice',e.target.checked));
 $('effectsToggle').addEventListener('change',e=>changePref('effects',e.target.checked));
 $('reachToggle').addEventListener('change',e=>changePref('reach',e.target.checked));
+$('dragToggle').addEventListener('change',e=>changePref('drag',e.target.checked));
 $('winChoice').addEventListener('change',e=>changePref('win',e.target.value));
 $('deviceChoice').addEventListener('change',e=>{prefs.device=e.target.value;if(e.target.value==='ipad'){prefs.layout=4;prefs.reach=false}else if(e.target.value==='board'){prefs.layout=5;prefs.reach=true}else{let k=screenSuggest();prefs.layout=k==='board'?5:4;prefs.reach=k==='board'}save();syncControls();render()});
 $('teacherGear').addEventListener('click',openSettings);
