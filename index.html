@@ -52,6 +52,32 @@ header{min-height:clamp(46px,10vh,101px)}
 .pictureDragGhost{position:fixed;z-index:20;pointer-events:none;transform:translate(-50%,-50%);aspect-ratio:1/1;background:white;border:3px solid #9ecab7;border-radius:17px;box-shadow:0 12px 34px #163c3180;display:flex;align-items:center;justify-content:center;opacity:.94}
 .pictureDragGhost .dragArt{width:90%;height:90%;display:flex;align-items:center;justify-content:center}
 .pictureDragGhost .dragArt img,.pictureDragGhost .dragArt svg{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+/* Keep the installed iPad game fixed to the screen rather than letting
+   Safari pan or rubber-band the whole document. Settings remains scrollable. */
+html,body{
+  height:100%;
+  max-height:100%;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+body{
+  position:fixed;
+  inset:0;
+  width:100%;
+}
+#app{
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+  touch-action:none;
+}
+#settingsContent{
+  touch-action:pan-y;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#teacherSettings{overscroll-behavior:contain}
 </style>
 </head>
 <body>
@@ -214,6 +240,13 @@ document.addEventListener('pointercancel',e=>{
 window.addEventListener('blur',cancelPictureDrag);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelPictureDrag()});
 $('callCard').addEventListener('dragstart',e=>e.preventDefault());
+/* iOS can bounce the page when the child drags on an empty part of
+   the board. Only block one-finger page movement inside the game;
+   the separate teacher dialog keeps normal touch scrolling. */
+document.addEventListener('touchmove',e=>{
+ if(e.touches.length!==1)return;
+ if(e.target instanceof Element && e.target.closest('#app') && e.cancelable)e.preventDefault();
+},{passive:false});
 $('pickBtn').addEventListener('click',pick);
 $('nextPlayerBtn').addEventListener('click',startGame);
 $('quickNewGame').addEventListener('click',confirmNewGame);
