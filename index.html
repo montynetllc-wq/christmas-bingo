@@ -52,6 +52,11 @@ header{min-height:clamp(46px,10vh,101px)}
 .pictureDragGhost{position:fixed;z-index:20;pointer-events:none;transform:translate(-50%,-50%);aspect-ratio:1/1;background:white;border:3px solid #9ecab7;border-radius:17px;box-shadow:0 12px 34px #163c3180;display:flex;align-items:center;justify-content:center;opacity:.94}
 .pictureDragGhost .dragArt{width:90%;height:90%;display:flex;align-items:center;justify-content:center}
 .pictureDragGhost .dragArt img,.pictureDragGhost .dragArt svg{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+/* Accessible printable downloads in teacher settings. */
+#printables .printableInfo{font-size:14px;color:#5f7365;margin:4px 0 12px}
+.printableLinks{display:flex;flex-direction:column;gap:10px}
+.printableLinks a{display:flex;align-items:center;min-height:50px;padding:12px 14px;border:1px solid #b9d1bf;border-radius:12px;background:#f3f8f2;color:#20543d;font-size:16px;font-weight:800;text-decoration:underline;text-underline-offset:3px;touch-action:manipulation}
+.printableLinks a:active{background:#e0efe0}
 /* Keep the installed iPad game fixed to the screen rather than letting
    Safari pan or rubber-band the whole document. Settings remains scrollable. */
 html,body{
@@ -100,6 +105,7 @@ body{
 <dialog id="teacherSettings"><div id="settingsContent"><h2>Teacher Settings</h2><p>For grown-ups. The same controls work on iPad and Promethean boards.</p>
 <fieldset><legend>Grid layout</legend><label class="option"><input type="radio" name="layout" value="4">4 columns × 5 rows</label><label class="option"><input type="radio" name="layout" value="5">5 columns × 4 rows</label></fieldset>
 <fieldset><legend>Picture and sound</legend><label class="option"><input id="voiceToggle" type="checkbox">Voice: read the picture name aloud</label><label class="option"><input id="effectsToggle" type="checkbox">Gentle sound effects</label><label class="option"><input id="reachToggle" type="checkbox">Reach Mode: bring one row down to the bottom</label><label class="option"><input id="dragToggle" type="checkbox">Allow drag-and-drop matching (tap also works)</label></fieldset>
+<fieldset id="printables"><legend>Printable Bingo PDFs</legend><p class="printableInfo">Use these PDFs to print classroom cards.</p><div class="printableLinks"><a href="/pdfs/christmas_bingo_20_cards.pdf" download="christmas_bingo_20_cards.pdf" target="_blank" rel="noopener">Download 20 Bingo cards (PDF)</a><a href="/pdfs/christmas_bingo_20_picture_calling_cards.pdf" download="christmas_bingo_20_picture_calling_cards.pdf" target="_blank" rel="noopener">Download picture calling cards (PDF)</a></div></fieldset>
 <fieldset><legend>Game rules</legend><label class="option" for="winChoice">Bingo winning pattern</label><select id="winChoice"><option value="line">Any complete row or column</option><option value="blackout">Cover all 20 pictures</option></select></fieldset>
 <fieldset><legend>Device preference (optional)</legend><label class="option" for="deviceChoice">Initial setup for this device</label><select id="deviceChoice"><option value="auto">Automatic (screen-based suggestion)</option><option value="ipad">iPad defaults</option><option value="board">Promethean defaults</option></select><p id="note">Both modes offer every feature. This only selects the initial preferences for new devices.</p></fieldset>
 <div class="setting-actions"><button id="newGameBtn" class="danger" type="button">NEW GAME</button><button id="doneBtn" class="done" type="button">DONE</button></div>
