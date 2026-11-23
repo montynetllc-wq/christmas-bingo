@@ -8,7 +8,7 @@ Open `index.html` in a browser. The game includes its images, styles, and JavaSc
 
 - Tap **Pick a Card** to reveal a Christmas picture.
 - Find and tap the matching picture on the board to cover it.
-- A discreet teacher-settings gear opens with a two-second hold.
+- Tap the gear once to open **Teacher Settings**.
 - Teacher Settings include the 4-column × 5-row and 5-column × 4-row layouts, optional voice, and Reach Mode.
 - The decorative BINGO heading and original Christmas picture illustrations are included.
 
@@ -17,7 +17,7 @@ Open `index.html` in a browser. The game includes its images, styles, and JavaSc
 1. Open the repository **Settings → Pages**.
 2. Under **Build and deployment**, choose **Deploy from a branch**.
 3. Choose branch **main** and folder **/(root)**, then select **Save**.
-4. Once the Pages deployment completes, visit [Christmas Bingo](https://montynetllc-wq.github.io/christmas-bingo/).
+4. After Pages deploys and the custom domain in `CNAME` is set up in Pages with working DNS and HTTPS, visit [Christmas Bingo](https://christmasbingo.playtree.games/).
 
 GitHub Pages publishing must be enabled in repository settings. A GitHub repository link is not the live game URL.
 
