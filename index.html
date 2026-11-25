@@ -163,7 +163,7 @@ const prefsKey='xmas-bingo-teacher-settings-v2';
 const screenSuggest=()=> (window.innerWidth>=1280 && window.innerWidth / Math.max(1,window.innerHeight)>1.48)?'board':'ipad';
 const defaultPrefs=()=>({
   layout:screenSuggest()==='board'?5:4,
-  voice:false, effects:true, reach:true, drag:true,
+  voice:false, effects:true, reach:false, drag:true,
   win:'blackout', autoAdvance:false, device:'auto', holiday:'christmas'
 });
 let prefs;try{prefs={...defaultPrefs(),...JSON.parse(localStorage.getItem(prefsKey)||'{}')}}catch{prefs=defaultPrefs()}
