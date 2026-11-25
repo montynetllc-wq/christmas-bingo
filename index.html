@@ -313,7 +313,25 @@ $('teacherGear').addEventListener('click',openSettings);
 $('teacherSettings').addEventListener('close',showNextCardIfAutomatic);
 $('teacherSettings').addEventListener('click',e=>{let dlg=$('teacherSettings');if(e.target===dlg)dlg.close()});
 function applyHoliday(){if(!Object.prototype.hasOwnProperty.call(HOLIDAYS,prefs.holiday))prefs.holiday='christmas';const h=HOLIDAYS[prefs.holiday];ICONS=h.icons;document.body.dataset.holiday=prefs.holiday;$('brandBanner').hidden=prefs.holiday!=='christmas';$('holidayBanner').hidden=prefs.holiday==='christmas';$('printables').hidden=prefs.holiday!=='christmas';document.title=h.name+' Picture Bingo';$('board').setAttribute('aria-label',h.name+' bingo board');$('callRow').setAttribute('aria-label','Called '+h.name+' picture');}
-$('holidayChoice').addEventListener('change',e=>{if(e.target.value===prefs.holiday)return;if(called.length&&!confirm('Switch holidays and start a new game?')){syncControls();return}prefs.holiday=e.target.value;applyHoliday();save();startGame();});
+$('holidayChoice').addEventListener('change',e=>{
+  const holiday=e.target.value;
+  if(holiday===prefs.holiday)return;
+  if(called.length&&!confirm('Switch holidays and start a new game?')){syncControls();return}
+  prefs.holiday=holiday;
+  if(window.location.protocol==='https:'||window.location.protocol==='http:'){
+    const url=new URL(window.location.href);
+    url.pathname='/'+holiday+'/';
+    window.history.replaceState(null,'',url);
+  }
+  applyHoliday();save();startGame();
+});
+
+// A shared holiday link takes precedence over the last collection on this device.
+const route=window.location.pathname.replace(/\/(?:index\.html)?$/,'').slice(1);
+if(Object.prototype.hasOwnProperty.call(HOLIDAYS,route)&&route!==prefs.holiday){
+  prefs.holiday=route;
+  save();
+}
 applyHoliday();startGame();
 </script>
 </body></html>
