@@ -13,7 +13,7 @@
 <style>
 :root{--green:#20624b;--dark:#204d3e;--line:#ceddd1;--red:#bc3b3b;--cream:#ffffff;--gold:#eabf5b;--head:64px;--shadow:0 4px 22px #223c2c16}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--cream);font-family:ui-rounded,"Avenir Next",system-ui,-apple-system,Arial,sans-serif;color:#163e30}body{overscroll-behavior:none}
-button,input,select{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible,input:focus-visible,select:focus-visible{outline:4px solid #ebb958;outline-offset:3px}
+button,input,select{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:4px solid #ebb958;outline-offset:3px}
 #app{height:100dvh;min-height:480px;display:flex;flex-direction:column;padding:clamp(6px,1.3vh,13px) clamp(8px,1.7vw,22px) clamp(10px,1.7vh,20px);max-width:1700px;margin:auto}
 header{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;min-height:48px}h1{font-family:Georgia,serif;font-size:clamp(26px,3.5vw,45px);letter-spacing:.18em;line-height:1;margin:0 12px;color:#b23d3b;font-weight:800} .garland{width:clamp(42px,7vw,88px);height:34px;flex:none} .garland.flip{transform:scaleX(-1)}
 #teacherGear{position:absolute;right:0;top:0;width:35px;height:35px;background:transparent;border:0;color:#899990;font-size:19px;touch-action:none;-webkit-touch-callout:none;user-select:none;opacity:.65} #teacherGear:active{opacity:1;background:#e3eae1;border-radius:50%}
@@ -83,6 +83,9 @@ body{
   -webkit-overflow-scrolling:touch;
 }
 #teacherSettings{overscroll-behavior:contain}
+#holidaySettings{border:1px solid #cfdfd2;border-radius:13px;padding:0 14px;margin:10px 0}
+#holidaySettings summary{padding:12px 0;font-weight:700;cursor:pointer}
+#holidaySettings[open]{padding-bottom:14px}
 body[data-holiday="thanksgiving"]{--line:#e5c6a5;--green:#955326}body[data-holiday="thanksgiving"] #pickBtn{background:#955326;box-shadow:0 5px 0 #653719}#holidayBanner{font-size:clamp(16px,3.4vw,40px);letter-spacing:.04em;color:#955326;text-align:center;max-width:70%}#brandBanner[hidden],#holidayBanner[hidden]{display:none}
 </style>
 </head>
@@ -108,15 +111,19 @@ body[data-holiday="thanksgiving"]{--line:#e5c6a5;--green:#955326}body[data-holid
 </main>
 </div>
 <div id="bingoOverlay" role="dialog" aria-modal="true" aria-label="Bingo celebration"><div id="bingoPanel"><h2>BINGO!</h2><p>Great matching!</p><button id="nextPlayerBtn" type="button">NEXT PLAYER</button></div></div>
-<dialog id="teacherSettings"><div id="settingsContent"><h2>Teacher Settings</h2><p>For grown-ups. The same controls work on iPad and Promethean boards.</p>
-<fieldset><legend>Holiday</legend><label class="option" for="holidayChoice">Picture collection</label><select id="holidayChoice"><option value="christmas">Christmas</option><option value="thanksgiving">Thanksgiving</option></select></fieldset>
+<dialog id="teacherSettings" aria-labelledby="settingsTitle"><div id="settingsContent"><h2 id="settingsTitle" tabindex="-1" autofocus>Teacher Settings</h2><p>For grown-ups. The same controls work on iPad and Promethean boards.</p>
 <fieldset><legend>Grid layout</legend><label class="option"><input type="radio" name="layout" value="4">4 columns × 5 rows</label><label class="option"><input type="radio" name="layout" value="5">5 columns × 4 rows</label></fieldset>
 <fieldset><legend>Picture and sound</legend><label class="option"><input id="voiceToggle" type="checkbox">Voice: read the picture name aloud</label><label class="option"><input id="effectsToggle" type="checkbox">Gentle sound effects</label><label class="option"><input id="reachToggle" type="checkbox">Reach Mode: bring one row down to the bottom</label><label class="option"><input id="dragToggle" type="checkbox">Allow drag-and-drop matching (tap also works)</label></fieldset>
 <fieldset id="printables"><legend>Printable Bingo PDFs</legend><p class="printableInfo">Use these PDFs to print classroom cards.</p><div class="printableLinks"><a href="/pdfs/christmas_bingo_20_cards.pdf" download="christmas_bingo_20_cards.pdf" target="_blank" rel="noopener">Download 20 Bingo cards (PDF)</a><a href="/pdfs/christmas_bingo_20_picture_calling_cards.pdf" download="christmas_bingo_20_picture_calling_cards.pdf" target="_blank" rel="noopener">Download picture calling cards (PDF)</a></div></fieldset>
 <fieldset><legend>Game rules</legend>
 <label class="option"><input id="autoAdvanceToggle" type="checkbox">Automatically show the next card after a match</label>
 <label class="option" for="winChoice">Bingo winning pattern</label><select id="winChoice"><option value="line">Any complete row or column</option><option value="blackout">Cover all 20 pictures</option></select></fieldset>
-<fieldset><legend>Device preference (optional)</legend><label class="option" for="deviceChoice">Initial setup for this device</label><select id="deviceChoice"><option value="auto">Automatic (screen-based suggestion)</option><option value="ipad">iPad defaults</option><option value="board">Promethean defaults</option></select><p id="note">Both modes offer every feature. This only selects the initial preferences for new devices.</p></fieldset>
+<details id="holidaySettings">
+  <summary>Change holiday</summary>
+  <label class="option" for="holidayChoice">Picture collection</label>
+  <select id="holidayChoice"><option value="christmas">Christmas</option><option value="thanksgiving">Thanksgiving</option></select>
+</details>
+<fieldset><legend>Device preference (optional)</legend><label class="option" for="deviceChoice">Grid layout preset</label><select id="deviceChoice"><option value="auto">Automatic (screen-based suggestion)</option><option value="ipad">iPad defaults</option><option value="board">Promethean defaults</option></select></fieldset>
 <div class="setting-actions"><button id="newGameBtn" class="danger" type="button">NEW GAME</button><button id="doneBtn" class="done" type="button">DONE</button></div>
 <p id="note">Tap the gear once to reopen these settings. Current card and covered spaces remain unchanged when switching layouts.</p>
 </div></dialog>
@@ -154,7 +161,11 @@ let ICONS=CHRISTMAS_ICONS;
 const $ = id=>document.getElementById(id);
 const prefsKey='xmas-bingo-teacher-settings-v2';
 const screenSuggest=()=> (window.innerWidth>=1280 && window.innerWidth / Math.max(1,window.innerHeight)>1.48)?'board':'ipad';
-const defaultPrefs=()=>{let kind=screenSuggest();return {layout:kind==='board'?5:4,voice:false,effects:false,autoAdvance:false,drag:false,reach:kind==='board',win:'line',device:'auto',holiday:'christmas'}};
+const defaultPrefs=()=>({
+  layout:screenSuggest()==='board'?5:4,
+  voice:false, effects:true, reach:true, drag:true,
+  win:'blackout', autoAdvance:false, device:'auto', holiday:'christmas'
+});
 let prefs;try{prefs={...defaultPrefs(),...JSON.parse(localStorage.getItem(prefsKey)||'{}')}}catch{prefs=defaultPrefs()}
 if(![4,5].includes(+prefs.layout))prefs.layout=4;
 let order=[],called=[],covered=new Set(),current=null,reachRow=0,hasCelebrated=false;
@@ -176,7 +187,14 @@ function bingo(){let cols=+prefs.layout,rows=20/cols;let positions=order.map(x=>
 function choose(id){let obj=ICONS.find(x=>x.id===id);if(!current){$('message').textContent='Pick a picture first';return}if(covered.has(id))return;if(id!==current){$('message').textContent='Look for the same picture';document.querySelectorAll('.cell').forEach(x=>{if(x.getAttribute('aria-label')===obj.name){x.classList.add('wrong');setTimeout(()=>x.classList.remove('wrong'),450)}});return}covered.add(id);let finished=called.length===ICONS.length;$('message').textContent=finished?'All pictures matched!':'You found it!';$('pickBtn').disabled=finished;$('pickBtn').innerHTML=finished?'ALL<br>FOUND':'NEXT<br>PICTURE';tone();render();if(bingo()&&!hasCelebrated){hasCelebrated=true;$('bingoOverlay').classList.add('show');tone(800)}else{showNextCardIfAutomatic()} }
 function changePref(key,value){if(key==='drag'){cancelPictureDrag();if(current&&!covered.has(current))$('message').textContent=value?'Drag or tap the match!':'Find this picture!'}prefs[key]=value;save();render();if(bingo()&&!hasCelebrated){hasCelebrated=true;$('bingoOverlay').classList.add('show')}}
 function syncControls(){$('autoAdvanceToggle').checked=prefs.autoAdvance;$('holidayChoice').value=prefs.holiday;document.querySelectorAll('input[name="layout"]').forEach(x=>x.checked=+x.value===+prefs.layout);$('voiceToggle').checked=prefs.voice;$('effectsToggle').checked=prefs.effects;$('reachToggle').checked=prefs.reach;$('dragToggle').checked=!!prefs.drag;$('winChoice').value=prefs.win;$('deviceChoice').value=prefs.device}
-function openSettings(){cancelPictureDrag();syncControls();if(!$('teacherSettings').open)$('teacherSettings').showModal()}
+function openSettings(){
+  const dialog=$('teacherSettings');
+  if(dialog.open)return;
+  cancelPictureDrag();
+  syncControls();
+  $('holidaySettings').open=false;
+  dialog.showModal();
+}
 /* Touch gestures use native touch events for reliable iPad Safari handling.
    Mouse and pen use Pointer Events. The actual called card stays anchored:
    a visual copy follows the finger, and a match uses the existing choose(). */
@@ -283,7 +301,14 @@ $('reachToggle').addEventListener('change',e=>changePref('reach',e.target.checke
 $('dragToggle').addEventListener('change',e=>changePref('drag',e.target.checked));
 $('autoAdvanceToggle').addEventListener('change',e=>changePref('autoAdvance',e.target.checked));
 $('winChoice').addEventListener('change',e=>changePref('win',e.target.value));
-$('deviceChoice').addEventListener('change',e=>{prefs.device=e.target.value;if(e.target.value==='ipad'){prefs.layout=4;prefs.reach=false}else if(e.target.value==='board'){prefs.layout=5;prefs.reach=true}else{let k=screenSuggest();prefs.layout=k==='board'?5:4;prefs.reach=k==='board'}save();syncControls();render()});
+$('deviceChoice').addEventListener('change',e=>{
+  prefs.device=e.target.value;
+  const device=prefs.device==='auto'?screenSuggest():prefs.device;
+  prefs.layout=device==='board'?5:4;
+  save();
+  syncControls();
+  render();
+});
 $('teacherGear').addEventListener('click',openSettings);
 $('teacherSettings').addEventListener('close',showNextCardIfAutomatic);
 $('teacherSettings').addEventListener('click',e=>{let dlg=$('teacherSettings');if(e.target===dlg)dlg.close()});
